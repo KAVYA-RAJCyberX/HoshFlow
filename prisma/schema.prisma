@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id         String   @id @default(uuid())
+  role       String
+  name       String
+  email      String   @unique
+  password   String
+  department String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+
+model Patient {
+  id              String   @id @default(uuid())
+  uhid            String   @unique
+  name            String
+  age             Int
+  gender          String
+  bloodGroup      String
+  ward            String
+  bedId           String?
+  diagnosis       String
+  attendingDoctor String
+  admitDate       DateTime @default(now())
+  status          String
+  acuity          String
+  vitals          String?
+  allergies       String?
+  fallRisk        String
+
+  tpaProvider      String?
+  tpaPreAuthAmount Float?
+  tpaBilledAmount  Float?
+  tpaCoPayDue      Float?
+  tpaStatus        String?
+  tpaQueryNote     String?
+
+  dischargeClinicalSignOff  Boolean @default(false)
+  dischargeNursingHandover  Boolean @default(false)
+  dischargePharmacyBag      Boolean @default(false)
+  dischargeBillingClearance Boolean @default(false)
+  dischargeExitGatePass     Boolean @default(false)
+
+  clinicalNotes ClinicalObservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bed {
+  id                     String    @id
+  ward                   String
+  wardCategory           String
+  status                 String
+  patientName            String?
+  patientUhid            String?
+  patientAcuity          String?
+  attendingStaff         String?
+  assignedHousekeeper    String?
+  cleaningProgress       Int?
+  cleaningEstMinutesLeft Int?
+  expectedDischargeTime  DateTime?
+  hardwareType           String
+  tempAndPressure        String
+  lastSanitized          DateTime?
+  suggestedAllocation    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClinicalObservation {
+  id                String   @id @default(uuid())
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientUhid       String
+  patientName       String
+  authorName        String
+  authorRole        String
+  authorDesignation String
+  category          String
+  priority          String
+  observation       String
+  timestamp         String
+  fullDate          DateTime @default(now())
+  vitalsSnapshot    String?
+  tags              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientUhid])
+}
+
+model Invoice {
+  id                String   @id @default(uuid())
+  uhid              String
+  patientName       String
+  wardBed           String
+  insuranceProvider String
+  dateTime          DateTime @default(now())
+  totalAmount       Float
+  tpaPaid           Float
+  patientCoPay      Float
+  clearanceStatus   String
+  claimQueryNote    String?
+  receiptNo         String?
+  receiptPrintedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uhid])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  timestamp String
+  fullDate  DateTime @default(now())
+  actor     String
+  role      String
+  action    String
+  category  String
+  ipAddress String
+  status    String
+  severity  String
+  metadata  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Prescription {
+  id              String   @id @default(uuid())
+  uhid            String   @default("UHID-1001")
+  patientName     String
+  bed             String   @default("B-101")
+  ward            String   @default("General Ward")
+  medicationName  String
+  dosage          String
+  frequency       String   @default("STAT")
+  route           String   @default("IV")
+  doctorName      String
+  urgency         String   @default("Urgent Priority")
+  narcoticVault   Boolean  @default(false)
+  status          String   @default("pending_dual_sign")
+  tubeStation     String?
+  orderTime       String   @default("Today 10:00 AM")
+  dispatchTime    String?
+  authorizedBy    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShiftHandover {
+  id            String   @id @default(uuid())
+  department    String
+  outgoingStaff String
+  incomingStaff String
+  status        String   @default("completed")
+  handoverNotes String?
+  createdAt     DateTime @default(now())
+}
+
+model SystemConfig {
+  id          String   @id
+  name        String
+  enabled     Boolean  @default(true)
+  category    String
+  description String?
+  updatedAt   DateTime @updatedAt
+}

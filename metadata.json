@@ -1,0 +1,6 @@
+{
+  "name": "hosflow",
+  "description": "hosflow - Modern Clinical Flow, Bed Turnover, Patient Acuity, and Hospital Operations Management Platform for CityCare Multispeciality Hospital, Pune.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

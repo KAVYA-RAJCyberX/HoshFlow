@@ -1,0 +1,325 @@
+// Prisma Schema for Full-Stack Hospital Management System (HMS)
+// Database Engine: PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  HOSPITAL_ADMIN
+  DOCTOR
+  NURSE
+  STAFF
+  BED_MANAGER
+  BILLING
+  PHARMACY
+}
+
+enum ShiftType {
+  MORNING
+  EVENING
+  NIGHT
+  ON_CALL
+}
+
+enum AcuityLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+  EMERGENT
+}
+
+enum OtStatus {
+  READY_FOR_CASE
+  SURGERY_IN_PROGRESS
+  STERILIZING_TURNOVER
+  MAINTENANCE
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  BOOKED
+  IN_USE
+  CALIBRATION
+  MAINTENANCE
+}
+
+model Hospital {
+  id               String       @id @default(uuid())
+  code             String       @unique
+  name             String
+  campus           String
+  address          String
+  city             String
+  state            String
+  country          String       @default("India")
+  postalCode       String
+  contactPhone     String
+  emergencyHotline String
+  contactEmail     String
+  tier             String       @default("TIER_1_QUATERNARY")
+  accreditation    String       @default("NABH & JCI Accredited")
+  totalBeds        Int          @default(150)
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  users            User[]
+  departments      Department[]
+  doctors          Doctor[]
+  staff            Staff[]
+  patients         Patient[]
+  admissions       Admission[]
+  appointments     Appointment[]
+  operatingTheatres OperatingTheatre[]
+  equipment        HospitalEquipment[]
+  shifts           StaffShiftSchedule[]
+  auditLogs        AuditLog[]
+}
+
+model User {
+  id           String      @id @default(uuid())
+  hospitalId   String?
+  hospital     Hospital?   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  email        String      @unique
+  passwordHash String
+  fullName     String
+  role         UserRole
+  phoneNumber  String?
+  avatarUrl    String?
+  isActive     Boolean     @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  doctorProfile Doctor?
+  staffProfile  Staff?
+  shifts        StaffShiftSchedule[]
+  auditLogs     AuditLog[]
+}
+
+model Department {
+  id           String      @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  deptType     String
+  floorLocation String
+  bedCapacity  Int         @default(20)
+  isOperational Boolean    @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  doctors      Doctor[]
+  staff        Staff[]
+  admissions   Admission[]
+  shifts       StaffShiftSchedule[]
+
+  @@unique([hospitalId, code])
+}
+
+model Doctor {
+  id                  String       @id @default(uuid())
+  userId              String       @unique
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  departmentId        String
+  department          Department   @relation(fields: [departmentId], references: [id])
+  medicalLicenseNumber String      @unique
+  specialty           String
+  qualification       String
+  opdRoomNumber       String
+  opdTiming           String
+  consultationFee     Decimal      @default(800.00)
+  status              String       @default("ACTIVE")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  admissions          Admission[]
+  appointments        Appointment[]
+  otSurgeries         OtBooking[]
+}
+
+model Staff {
+  id                  String       @id @default(uuid())
+  userId              String       @unique
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  departmentId        String
+  department          Department   @relation(fields: [departmentId], references: [id])
+  staffCategory       String
+  registrationId      String?
+  assignedShift       ShiftType    @default(MORNING)
+  floorWing           String?
+  status              String       @default("ON_DUTY")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}
+
+model Patient {
+  id                  String       @id @default(uuid())
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  uhid                String
+  firstName           String
+  lastName            String
+  dateOfBirth         DateTime
+  gender              String
+  bloodGroup          String
+  contactPhone        String
+  address             String?
+  insuranceProvider   String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  admissions          Admission[]
+  appointments        Appointment[]
+  otBookings          OtBooking[]
+
+  @@unique([hospitalId, uhid])
+}
+
+model Admission {
+  id                  String       @id @default(uuid())
+  patientId           String
+  patient             Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  departmentId        String
+  department          Department   @relation(fields: [departmentId], references: [id])
+  attendingDoctorId   String
+  attendingDoctor     Doctor       @relation(fields: [attendingDoctorId], references: [id])
+  bedNumber           String
+  admitDate           DateTime     @default(now())
+  dischargeDate       DateTime?
+  status              String       @default("ADMITTED")
+  acuity              AcuityLevel  @default(MODERATE)
+  primaryDiagnosis    String
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}
+
+model Appointment {
+  id                  String       @id @default(uuid())
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patientId           String
+  patient             Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId            String
+  doctor              Doctor       @relation(fields: [doctorId], references: [id])
+  appointmentDate     DateTime
+  appointmentTime     String
+  reasonForVisit      String?
+  status              String       @default("SCHEDULED")
+  tokenNumber         Int
+  createdAt           DateTime     @default(now())
+}
+
+model OperatingTheatre {
+  id                  String       @id @default(uuid())
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  name                String
+  suiteType           String
+  floorWing           String
+  currentStatus       OtStatus     @default(READY_FOR_CASE)
+  turnoverMinutes     Int          @default(25)
+  leadSurgeon         String?
+  activeCaseSummary   String?
+  createdAt           DateTime     @default(now())
+
+  bookings            OtBooking[]
+}
+
+model OtBooking {
+  id                  String           @id @default(uuid())
+  operatingTheatreId  String
+  operatingTheatre    OperatingTheatre @relation(fields: [operatingTheatreId], references: [id], onDelete: Cascade)
+  patientId           String
+  patient             Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  leadSurgeonId       String
+  leadSurgeon         Doctor           @relation(fields: [leadSurgeonId], references: [id])
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+  procedureName       String
+  urgencyLevel        String           @default("ELECTIVE")
+  status              String           @default("SCHEDULED")
+  createdAt           DateTime         @default(now())
+}
+
+model HospitalEquipment {
+  id                  String           @id @default(uuid())
+  hospitalId          String
+  hospital            Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  equipmentCode       String
+  name                String
+  category            String
+  currentLocation     String
+  status              EquipmentStatus  @default(AVAILABLE)
+  serialNumber        String           @unique
+  lastCalibrationDate DateTime?
+  nextCalibrationDue  DateTime?
+  createdAt           DateTime         @default(now())
+
+  bookings            EquipmentBooking[]
+}
+
+model EquipmentBooking {
+  id                  String            @id @default(uuid())
+  equipmentId         String
+  equipment           HospitalEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  patientId           String?
+  requestedBy         String
+  bookedFrom          DateTime
+  bookedUntil         DateTime
+  purpose             String
+  allocatedLocation   String
+  status              String            @default("CONFIRMED")
+  createdAt           DateTime          @default(now())
+}
+
+model StaffShiftSchedule {
+  id                  String       @id @default(uuid())
+  hospitalId          String
+  hospital            Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  departmentId        String
+  department          Department   @relation(fields: [departmentId], references: [id])
+  userId              String
+  user                User         @relation(fields: [userId], references: [id])
+  shiftDate           DateTime
+  shiftType           ShiftType
+  startTime           String
+  endTime             String
+  stationBay          String?
+  isCovered           Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+
+  @@unique([userId, shiftDate, shiftType])
+}
+
+model AuditLog {
+  id                  String       @id @default(uuid())
+  hospitalId          String?
+  hospital            Hospital?    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  userId              String?
+  user                User?        @relation(fields: [userId], references: [id])
+  userRole            String
+  actorName           String
+  actionType          String
+  resourceAffected    String
+  ipAddress           String?
+  status              String       @default("VERIFIED")
+  severity            String       @default("info")
+  payload             Json?
+  createdAt           DateTime     @default(now())
+}
