@@ -1,0 +1,91 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hosflow Complete Operations Lifecycle",
+    "subtitle": "End-to-End Patient Journey across all Clinical and Administrative Views",
+    "output": "hosflow-full-app-workflow.html",
+    "quality_profile": "showcase",
+    "animation": "trace"
+  },
+  "lanes": [
+    { "id": "patient", "label": "Patient Journey" },
+    { "id": "reception", "label": "Intake & Registration" },
+    { "id": "clinical", "label": "Doctors & Nurses" },
+    { "id": "pharmacy", "label": "Pharmacy & Labs" },
+    { "id": "billing", "label": "Billing & TPA" },
+    { "id": "housekeeping", "label": "Bed Management" },
+    { "id": "admin", "label": "System Governance" }
+  ],
+  "phases": [
+    { "id": "admit", "label": "Admission", "fromCol": 0, "toCol": 0 },
+    { "id": "diagnose", "label": "Diagnosis", "fromCol": 1, "toCol": 1 },
+    { "id": "treat", "label": "Treatment", "fromCol": 2, "toCol": 2 },
+    { "id": "discharge", "label": "Discharge Prep", "fromCol": 3, "toCol": 3 },
+    { "id": "clear", "label": "Clearance", "fromCol": 4, "toCol": 4 },
+    { "id": "turnover", "label": "Turnover", "fromCol": 5, "toCol": 5 }
+  ],
+  "mainPath": [
+    "self_checkin", "intake", "bed_assign", "vitals", 
+    "consult", "inventory", "dispense", "administer", 
+    "discharge_order", "compile_bill", "tpa_claim", 
+    "clear_payment", "gate_pass", "leave", "turnover", "exec_dash"
+  ],
+  "nodes": [
+    { "id": "self_checkin", "lane": "patient", "col": 0, "type": "frontend", "label": "Self Check-In", "sublabel": "Patient Portal", "width": 124 },
+    { "id": "intake", "lane": "reception", "col": 0, "type": "backend", "label": "Patient Intake", "sublabel": "Reception View", "width": 124 },
+    { "id": "bed_assign", "lane": "housekeeping", "col": 0, "type": "database", "label": "Assign Bed", "sublabel": "Bed Matrix", "width": 124 },
+    { "id": "vitals", "lane": "clinical", "col": 0, "type": "backend", "label": "Initial Vitals", "sublabel": "Nursing Station", "width": 124 },
+
+    { "id": "consult", "lane": "clinical", "col": 1, "type": "frontend", "label": "Consult & Orders", "sublabel": "Clinical Station", "width": 124 },
+    { "id": "inventory", "lane": "pharmacy", "col": 1, "type": "database", "label": "Check Inventory", "sublabel": "Pharmacy Stat", "width": 124 },
+
+    { "id": "dispense", "lane": "pharmacy", "col": 2, "type": "backend", "label": "Dispense & Labs", "sublabel": "LIS & Pharmacy", "width": 124 },
+    { "id": "administer", "lane": "clinical", "col": 2, "type": "security", "label": "Administer & Monitor", "sublabel": "Doctor Flow", "width": 140 },
+
+    { "id": "discharge_order", "lane": "clinical", "col": 3, "type": "backend", "label": "Discharge Order", "sublabel": "Flow Pipeline", "width": 124 },
+    { "id": "compile_bill", "lane": "billing", "col": 3, "type": "database", "label": "Compile Ledger", "sublabel": "Billing Desk", "width": 124 },
+    { "id": "governance", "lane": "admin", "col": 3, "type": "security", "label": "Live Audit", "sublabel": "System Gov", "width": 124 },
+
+    { "id": "tpa_claim", "lane": "billing", "col": 4, "type": "external", "label": "Submit TPA Claim", "sublabel": "Insurance API", "width": 124 },
+    { "id": "copay", "lane": "patient", "col": 4, "type": "messagebus", "label": "Pay Co-Pay", "sublabel": "UPI / Cash", "width": 124 },
+    { "id": "global_ops", "lane": "admin", "col": 4, "type": "cloud", "label": "Global Operations", "sublabel": "Ops Overview", "width": 124 },
+
+    { "id": "clear_payment", "lane": "billing", "col": 5, "type": "security", "label": "Clear Payment", "sublabel": "Ledger Cleared", "width": 124 },
+    { "id": "gate_pass", "lane": "reception", "col": 5, "type": "frontend", "label": "Issue Gate Pass", "sublabel": "Discharge Hub", "width": 124 },
+    { "id": "leave", "lane": "patient", "col": 5, "type": "external", "label": "Leave Facility", "sublabel": "Patient Home", "width": 124 },
+    { "id": "turnover", "lane": "housekeeping", "col": 5, "type": "backend", "label": "Bed Turnover", "sublabel": "Turnover Mgr", "width": 124 },
+    { "id": "exec_dash", "lane": "admin", "col": 5, "type": "frontend", "label": "Exec Analytics", "sublabel": "Admin View", "width": 124 }
+  ],
+  "edges": [
+    { "from": "self_checkin", "to": "intake" },
+    { "from": "intake", "to": "bed_assign", "route": "return-left", "bias": 0.2 },
+    { "from": "bed_assign", "to": "vitals", "route": "return-left" },
+    { "from": "vitals", "to": "consult" },
+
+    { "from": "consult", "to": "inventory" },
+    { "from": "inventory", "to": "dispense" },
+    { "from": "dispense", "to": "administer" },
+
+    { "from": "administer", "to": "discharge_order" },
+    { "from": "discharge_order", "to": "compile_bill" },
+    { "from": "compile_bill", "to": "governance", "role": "async" },
+    { "from": "compile_bill", "to": "tpa_claim" },
+
+    { "from": "tpa_claim", "to": "copay", "role": "error", "label": "shortfall" },
+    { "from": "tpa_claim", "to": "clear_payment", "label": "cashless" },
+    { "from": "copay", "to": "clear_payment", "label": "receipt" },
+    
+    { "from": "governance", "to": "global_ops", "role": "async" },
+    { "from": "global_ops", "to": "exec_dash", "role": "async" },
+
+    { "from": "clear_payment", "to": "gate_pass" },
+    { "from": "gate_pass", "to": "leave" },
+    { "from": "leave", "to": "turnover", "route": "outside-right" },
+    { "from": "turnover", "to": "exec_dash", "route": "outside-right" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Comprehensive View Mapping", "items": ["This diagram captures every module in Hosflow from Patient Portal to Executive Analytics."] },
+    { "dot": "emerald", "title": "Real-time Operations", "items": ["Global Operations and System Governance listen to billing/discharge events asynchronously."] }
+  ]
+}

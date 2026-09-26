@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hospital Billing & Discharge Flow",
+    "output": "hosflow-billing-workflow-rendered.html",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "ward", "label": "Ward & Patient" },
+    { "id": "billing", "label": "Billing Desk" },
+    { "id": "tpa", "label": "TPA / Insurance" }
+  ],
+  "phases": [
+    { "id": "admit", "label": "Service", "fromCol": 0, "toCol": 1 },
+    { "id": "bill", "label": "Invoicing", "fromCol": 2, "toCol": 2 },
+    { "id": "claim", "label": "TPA Claim", "fromCol": 3, "toCol": 3 },
+    { "id": "clear", "label": "Clearance", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["service", "invoice", "claim", "approve", "clear", "discharge"],
+  "nodes": [
+    { "id": "service", "lane": "ward", "col": 0, "type": "backend", "label": "Clinical Services", "sublabel": "Treatment", "width": 124 },
+    { "id": "invoice", "lane": "billing", "col": 1, "type": "database", "label": "Generate Invoice", "sublabel": "Ledger Sync", "width": 124 },
+    { "id": "claim", "lane": "billing", "col": 2, "type": "backend", "label": "Submit Claim", "sublabel": "Upload Docs", "width": 100 },
+    { "id": "tpa_query", "lane": "tpa", "col": 2, "type": "messagebus", "label": "TPA Query", "sublabel": "Hold", "width": 100 },
+    { "id": "resolve_query", "lane": "billing", "col": 3, "type": "frontend", "label": "Resolve Query", "sublabel": "Docs", "width": 100 },
+    { "id": "approve", "lane": "tpa", "col": 4, "type": "external", "label": "Approve Claim", "sublabel": "Cashless", "width": 100 },
+    { "id": "copay", "lane": "ward", "col": 4, "type": "frontend", "label": "Pay Co-Pay", "sublabel": "UPI / Cash", "width": 100 },
+    { "id": "clear", "lane": "billing", "col": 5, "type": "security", "label": "Clear Payment", "sublabel": "Ledger Cleared", "width": 100 },
+    { "id": "discharge", "lane": "ward", "col": 5, "type": "frontend", "label": "Discharge", "sublabel": "Gate Pass", "width": 100 }
+  ],
+  "edges": [
+    { "from": "service", "to": "invoice", "label": "final bill" },
+    { "from": "invoice", "to": "claim" },
+    { "from": "claim", "to": "approve", "bias": 0.2 },
+    { "from": "approve", "to": "clear" },
+    { "from": "clear", "to": "discharge", "label": "issue pass" },
+
+    { "from": "claim", "to": "tpa_query", "role": "error", "label": "query raised" },
+    { "from": "tpa_query", "to": "resolve_query", "label": "notify", "bias": 0.8 },
+    { "from": "resolve_query", "to": "approve", "label": "re-submit" },
+
+    { "from": "approve", "to": "copay", "label": "partial" },
+    { "from": "copay", "to": "clear", "label": "receipt" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Cashless Workflow", "items": ["TPA approves claim fully, patient is cleared for discharge directly."] },
+    { "dot": "rose", "title": "Exceptions", "items": ["TPA Query: Requires billing desk to upload certificates (e.g. Priya Sharma).", "Co-Pay: Requires patient to pay balance via UPI before clearance (e.g. Aarav Mehta)."] }
+  ]
+}

@@ -140,6 +140,30 @@ const clinicalNoteSchema = z.object({
   vitalsSnapshot: z.any().optional()
 });
 
+const prescriptionSchema = z.object({
+  uhid: z.string(),
+  patientName: z.string(),
+  bed: z.string().default("Unknown"),
+  ward: z.string().default("General Ward"),
+  medicationName: z.string(),
+  dosage: z.string(),
+  frequency: z.string(),
+  route: z.string(),
+  urgency: z.string().default("Routine"),
+  narcoticVault: z.boolean().default(false),
+});
+
+
+const invoiceSchema = z.object({
+  uhid: z.string(),
+  patientName: z.string(),
+  wardBed: z.string(),
+  insuranceProvider: z.string().default('Self'),
+  totalAmount: z.number().min(0),
+  tpaPaid: z.number().min(0).default(0),
+  patientCoPay: z.number().min(0)
+});
+
 // --- BEDS ENDPOINTS ---
 
 // Get all beds
@@ -442,6 +466,52 @@ app.get('/api/patients/:uhid/notes', async (req, res) => {
 
 // --- PHARMACY ---
 
+app.post('/api/pharmacy', async (req, res) => {
+  try {
+    const user = (req as any).user;
+    if (!user || (user.role !== 'doctor' && user.role !== 'nurse')) {
+      return res.status(403).json({ error: 'Only doctors and nurses can prescribe medication' });
+    }
+
+    const validatedData = prescriptionSchema.parse(req.body);
+    const status = validatedData.narcoticVault ? 'pending_dual_sign' : 'pending_dispense';
+    const orderTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const doctorName = user.name || 'Unknown Staff';
+
+    const [rx] = await prisma.$transaction([
+      prisma.prescription.create({
+        data: {
+          ...validatedData,
+          doctorName,
+          status,
+          orderTime,
+        }
+      }),
+      prisma.auditLog.create({
+        data: {
+          timestamp: new Date().toLocaleTimeString(),
+          actor: doctorName,
+          role: user.role,
+          action: `Prescribed ${validatedData.medicationName} (${validatedData.dosage}) for ${validatedData.patientName}`,
+          category: 'PHARMACY',
+          ipAddress: req.ip || '127.0.0.1',
+          status: 'SUCCESS',
+          severity: validatedData.narcoticVault ? 'WARNING' : 'INFO',
+          metadata: JSON.stringify({ uhid: validatedData.uhid, narcotic: validatedData.narcoticVault })
+        }
+      })
+    ]);
+
+    res.status(201).json(rx);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.issues });
+    }
+    console.error('Error creating prescription:', error);
+    res.status(500).json({ error: 'Failed to create prescription' });
+  }
+});
+
 app.get('/api/pharmacy', async (req, res) => {
   try {
     const prescriptions = await prisma.prescription.findMany({
@@ -557,6 +627,48 @@ app.patch('/api/pharmacy/:id', async (req, res) => {
 });
 
 // --- BILLING / INVOICES ---
+
+app.post('/api/invoices', async (req, res) => {
+  try {
+    const user = (req as any).user;
+    if (!user || (user.role !== 'billing' && user.role !== 'admin')) {
+      return res.status(403).json({ error: 'Only billing staff can create invoices' });
+    }
+
+    const validatedData = invoiceSchema.parse(req.body);
+    const actor = getActorInfo(req, user.name || 'Billing Staff', 'billing');
+
+    const [inv] = await prisma.$transaction([
+      prisma.invoice.create({
+        data: {
+          ...validatedData,
+          clearanceStatus: 'pending'
+        }
+      }),
+      prisma.auditLog.create({
+        data: {
+          timestamp: new Date().toLocaleTimeString(),
+          actor: actor.actor,
+          role: actor.role,
+          action: `Generated new invoice for ${validatedData.patientName} (Amount: $${validatedData.totalAmount})`,
+          category: 'BILLING',
+          ipAddress: req.ip || '127.0.0.1',
+          status: 'SUCCESS',
+          severity: 'INFO',
+          metadata: JSON.stringify({ uhid: validatedData.uhid, amount: validatedData.totalAmount })
+        }
+      })
+    ]);
+
+    res.status(201).json(inv);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.issues });
+    }
+    console.error('Error creating invoice:', error);
+    res.status(500).json({ error: 'Failed to create invoice' });
+  }
+});
 
 app.get('/api/invoices', async (req, res) => {
   try {

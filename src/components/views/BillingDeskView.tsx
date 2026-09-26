@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ViewType } from '../../types';
+import { NewInvoiceModal } from '../common/NewInvoiceModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface BillingDeskViewProps {
@@ -30,6 +31,7 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
   const [activeFilter, setActiveFilter] = useState<'all' | 'cleared' | 'pending' | 'query' | 'discharged'>('all');
   const [aaravCleared, setAaravCleared] = useState(false);
   const [priyaQueryResolved, setPriyaQueryResolved] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch Invoices
@@ -94,6 +96,7 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
               Cashless & TPA Desk
             </span>
             <span className="text-neutral-400">•</span>
+
             <span className="text-xs text-neutral-500 font-medium">Live Ledger Sync Active</span>
           </div>
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
@@ -109,15 +112,15 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
             <span className="material-symbols-outlined text-[16px]">calendar_month</span>
             <span>May 2026</span>
           </div>
-          <button 
+          <button
             onClick={() => onTriggerToast('Exporting TPA Settlement reconciliation summary (XLSX)...')}
             className="flex items-center gap-1.5 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-semibold px-3.5 py-2 rounded-full shadow-sm border border-black/5 transition-all"
           >
             <span className="material-symbols-outlined text-[16px]">file_download</span>
             <span>TPA Summary</span>
           </button>
-          <button 
-            onClick={() => onTriggerToast('New patient invoice template opened.')}
+          <button
+            onClick={() => setIsInvoiceModalOpen(true)}
             className="flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
@@ -244,7 +247,7 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
                 <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold border-2 border-white">AM</div>
                 <div className="w-8 h-8 rounded-full bg-rose-200 text-rose-900 flex items-center justify-center text-xs font-bold border-2 border-white">PS</div>
               </div>
-              <button 
+              <button
                 onClick={() => onNavigate('discharge_hub')}
                 className="text-xs font-bold text-neutral-900 hover:underline flex items-center gap-1"
               >
@@ -279,9 +282,8 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
                     <p className="text-xs text-neutral-500">UHID: HOS-2026-1001 • Med Ward A (M-104)</p>
                   </div>
                 </div>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  aaravCleared ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900 border border-amber-300'
-                }`}>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${aaravCleared ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}>
                   {aaravCleared ? 'Cleared' : 'Co-pay Pending'}
                 </span>
               </div>
@@ -310,21 +312,20 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-2 pt-2 border-t border-neutral-100">
-              <button 
+              <button
                 onClick={() => {
                   setAaravCleared(true);
                   updateInvoiceMutation.mutate({ id: 'INV-2048', data: { clearanceStatus: 'cleared', patientCoPay: 0 } });
                   onTriggerToast('Aarav Mehta ₹8,500 co-pay collected via UPI. Gate pass unlocked!');
                 }}
                 disabled={aaravCleared}
-                className={`w-full sm:flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${
-                  aaravCleared ? 'bg-emerald-100 text-emerald-900' : 'bg-black text-white hover:bg-neutral-800'
-                }`}
+                className={`w-full sm:flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${aaravCleared ? 'bg-emerald-100 text-emerald-900' : 'bg-black text-white hover:bg-neutral-800'
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">done_all</span>
                 <span>{aaravCleared ? 'Payment Cleared' : 'Clear Payment & Release Discharge'}</span>
               </button>
-              <button 
+              <button
                 onClick={() => onTriggerToast('SMS payment link dispatched to +91 98230 XXXXX.')}
                 className="w-full sm:w-auto py-2.5 px-4 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
               >
@@ -347,9 +348,8 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
                     <p className="text-xs text-neutral-500">UHID: HOS-2026-1002 • Surgical Bay (S-202)</p>
                   </div>
                 </div>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  priyaQueryResolved ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900 border border-rose-300'
-                }`}>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${priyaQueryResolved ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900 border border-rose-300'
+                  }`}>
                   {priyaQueryResolved ? 'Query Resolved' : 'Blocked Discharge'}
                 </span>
               </div>
@@ -377,21 +377,20 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-2 pt-2 border-t border-neutral-100">
-              <button 
+              <button
                 onClick={() => {
                   setPriyaQueryResolved(true);
                   updateInvoiceMutation.mutate({ id: 'INV-2045', data: { clearanceStatus: 'co_pay_pending', claimQueryNote: 'Query resolved with ICICI Lombard' } });
                   onTriggerToast('Implant batch certificates uploaded to ICICI Lombard portal. Query cleared!');
                 }}
                 disabled={priyaQueryResolved}
-                className={`w-full sm:flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${
-                  priyaQueryResolved ? 'bg-emerald-100 text-emerald-900' : 'bg-black text-white hover:bg-neutral-800'
-                }`}
+                className={`w-full sm:flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${priyaQueryResolved ? 'bg-emerald-100 text-emerald-900' : 'bg-black text-white hover:bg-neutral-800'
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">quickreply</span>
                 <span>{priyaQueryResolved ? 'Resolved' : 'Resolve TPA Query'}</span>
               </button>
-              <button 
+              <button
                 onClick={() => onTriggerToast('Consumable itemized breakdown reprinted.')}
                 className="w-full sm:w-auto py-2.5 px-4 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
               >
@@ -422,11 +421,10 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
               <button
                 key={f.id}
                 onClick={() => setActiveFilter(f.id as any)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                  activeFilter === f.id
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${activeFilter === f.id
                     ? 'bg-black text-white shadow-sm'
                     : 'text-neutral-600 hover:text-black hover:bg-neutral-200'
-                }`}
+                  }`}
               >
                 {f.label}
               </button>
@@ -463,37 +461,35 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
                     ₹{inv.totalAmount.toLocaleString('en-IN')}
                   </td>
                   <td className="py-3.5 px-3">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
-                      inv.clearanceStatus === 'cleared' ? 'bg-emerald-100 text-emerald-900' :
-                      inv.clearanceStatus === 'co_pay_pending' ? 'bg-amber-100 text-amber-900' :
-                      inv.clearanceStatus === 'tpa_query' ? 'bg-rose-100 text-rose-900' :
-                      inv.clearanceStatus === 'discharged' ? 'bg-neutral-200 text-neutral-800' :
-                      'bg-neutral-100 text-neutral-600'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        inv.clearanceStatus === 'cleared' ? 'bg-emerald-600' :
-                        inv.clearanceStatus === 'co_pay_pending' ? 'bg-amber-600' :
-                        inv.clearanceStatus === 'tpa_query' ? 'bg-rose-600' :
-                        'bg-neutral-600'
-                      }`}></span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${inv.clearanceStatus === 'cleared' ? 'bg-emerald-100 text-emerald-900' :
+                        inv.clearanceStatus === 'co_pay_pending' ? 'bg-amber-100 text-amber-900' :
+                          inv.clearanceStatus === 'tpa_query' ? 'bg-rose-100 text-rose-900' :
+                            inv.clearanceStatus === 'discharged' ? 'bg-neutral-200 text-neutral-800' :
+                              'bg-neutral-100 text-neutral-600'
+                      }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${inv.clearanceStatus === 'cleared' ? 'bg-emerald-600' :
+                          inv.clearanceStatus === 'co_pay_pending' ? 'bg-amber-600' :
+                            inv.clearanceStatus === 'tpa_query' ? 'bg-rose-600' :
+                              'bg-neutral-600'
+                        }`}></span>
                       {inv.clearanceStatus === 'cleared' ? 'Cleared (Paid)' :
-                       inv.clearanceStatus === 'co_pay_pending' ? `Co-pay Pending (₹${inv.patientCoPay})` :
-                       inv.clearanceStatus === 'tpa_query' ? 'TPA Query Raised' :
-                       inv.clearanceStatus === 'discharged' ? 'Discharged' : 'In Progress'}
+                        inv.clearanceStatus === 'co_pay_pending' ? `Co-pay Pending (₹${inv.patientCoPay})` :
+                          inv.clearanceStatus === 'tpa_query' ? 'TPA Query Raised' :
+                            inv.clearanceStatus === 'discharged' ? 'Discharged' : 'In Progress'}
                     </span>
                   </td>
                   <td className="py-3.5 px-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button 
+                      <button
                         onClick={() => printReceiptMutation.mutate(inv.id)}
-                        className="p-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700" 
+                        className="p-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
                         title="Print Receipt"
                       >
                         <span className="material-symbols-outlined text-[16px]">receipt</span>
                       </button>
-                      <button 
+                      <button
                         onClick={() => onTriggerToast(`Viewing full clinical billing folio for ${inv.patientName}...`)}
-                        className="p-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700" 
+                        className="p-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
                         title="View Details"
                       >
                         <span className="material-symbols-outlined text-[16px]">chevron_right</span>
@@ -506,6 +502,15 @@ export const BillingDeskView: React.FC<BillingDeskViewProps> = ({
           </table>
         </div>
       </div>
+
+      <NewInvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        onSuccess={(msg) => {
+          onTriggerToast(msg);
+          queryClient.invalidateQueries({ queryKey: ['invoices'] });
+        }}
+      />
     </div>
   );
 };

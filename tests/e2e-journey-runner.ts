@@ -139,41 +139,35 @@ async function run() {
   
   // No endpoint for Rx creation! We must inject via Prisma.
   log(`**Action:** \`POST /api/clinical-notes\` for doctor note.`);
-  log(`**Finding:** No endpoint exists to create Prescriptions (\`POST /api/pharmacy\` missing). Injected via Prisma directly.`);
-  const rx = await prisma.prescription.create({
-    data: {
-      uhid: uhid,
-      patientName: 'E2E Test Patient',
-      ward: 'General Ward',
-      medicationName: 'Inj Morphine 10mg',
-      dosage: '10mg',
-      route: 'IV',
-      frequency: 'SOS',
-      doctorName: 'Dr. House',
-      status: 'pending_dual_sign',
-      narcoticVault: true,
-      urgency: 'STAT',
-      orderTime: '10:20 AM'
-    }
+  log(`**Action:** \`POST /api/pharmacy\` for Narcotic and Routine Rx`);
+  const rxRes = await req('/api/pharmacy', 'POST', 'doctor', 'Dr. House', {
+    uhid: uhid,
+    patientName: 'E2E Test Patient',
+    ward: 'General Ward',
+    medicationName: 'Inj Morphine 10mg',
+    dosage: '10mg',
+    route: 'IV',
+    frequency: 'SOS',
+    narcoticVault: true,
+    urgency: 'STAT'
   });
-  const rx2 = await prisma.prescription.create({
-    data: {
-      uhid: uhid,
-      patientName: 'E2E Test Patient',
-      ward: 'General Ward',
-      medicationName: 'Paracetamol 500mg',
-      dosage: '500mg',
-      route: 'PO',
-      frequency: 'TID',
-      doctorName: 'Dr. House',
-      status: 'pending_dispense',
-      narcoticVault: false,
-      urgency: 'Routine',
-      orderTime: '10:22 AM'
-    }
+  const rx2Res = await req('/api/pharmacy', 'POST', 'doctor', 'Dr. House', {
+    uhid: uhid,
+    patientName: 'E2E Test Patient',
+    ward: 'General Ward',
+    medicationName: 'Paracetamol 500mg',
+    dosage: '500mg',
+    route: 'PO',
+    frequency: 'TID',
+    narcoticVault: false,
+    urgency: 'Routine'
   });
-  log(`**DB Result:** Doctor note saved. Narcotic Rx (${rx.id}) and Routine Rx (${rx2.id}) injected.`);
-  log(`**Status:** PARTIAL (Note works, Rx requires direct DB injection)\n`);
+  
+  const rx = rxRes.body;
+  const rx2 = rx2Res.body;
+  
+  log(`**DB Result:** Doctor note saved. Narcotic Rx (${rx.id}) and Routine Rx (${rx2.id}) created via API.`);
+  log(`**Status:** PASS\n`);
 
   // --- Stage 5: Pharmacy Dispense ---
   log('## Stage 5: Pharmacy Dispense');
@@ -213,19 +207,17 @@ async function run() {
 
   // --- Stage 7: Billing ---
   log('## Stage 7: Billing');
-  log(`**Finding:** No endpoint exists to create Invoices. Injected via Prisma directly.`);
-  const inv = await prisma.invoice.create({
-    data: {
-      uhid: uhid,
-      patientName: 'E2E Test Patient',
-      wardBed: `General Ward - ${bed.id}`,
-      insuranceProvider: 'Self',
-      totalAmount: 5000,
-      tpaPaid: 0,
-      patientCoPay: 5000,
-      clearanceStatus: 'pending'
-    }
+  log(`**Action:** \`POST /api/invoices\` for Patient Billing`);
+  const invRes = await req('/api/invoices', 'POST', 'billing', 'Neha Gupta', {
+    uhid: uhid,
+    patientName: 'E2E Test Patient',
+    wardBed: `General Ward - ${bed.id}`,
+    insuranceProvider: 'Self',
+    totalAmount: 5000,
+    tpaPaid: 0,
+    patientCoPay: 5000
   });
+  const inv = invRes.body;
   
   const patchInv = await req(`/api/billing/${inv.id}`, 'PATCH', 'billing', 'Bill Gates', { status: 'cleared', totalAmount: 100 });
   const patchInvAfter = await prisma.invoice.findUnique({ where: { id: inv.id } });
@@ -239,7 +231,7 @@ async function run() {
   log(`**Result 2:** \`${rec2.status}\` Receipt No: ${rec2.body.receiptNo}`);
   
   if (patchInvAfter?.totalAmount === 5000 && rec1.status === 200 && rec2.status === 200 && rec1.body.receiptNo === rec2.body.receiptNo) {
-    log(`**Status:** PARTIAL (Invoice creation injected, but PATCH and idempotency passed)\n`);
+    log(`**Status:** PASS\n`);
   } else {
     log(`**Status:** FAIL\n`);
   }

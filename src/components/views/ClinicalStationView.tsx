@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PatientVitalsTrend } from '../common/PatientVitalsTrend';
 import { clinicalNotesService } from '../../services/clinicalNotesService';
 import { CLINICAL_PERSONAS } from '../../data/mockHospitalData';
+import { NewRxModal } from '../common/NewRxModal';
 
 interface ClinicalStationViewProps {
   onNavigate: (view: ViewType) => void;
@@ -57,6 +58,7 @@ export const ClinicalStationView: React.FC<ClinicalStationViewProps> = ({
   const [inlineCategory, setInlineCategory] = useState<ObservationCategory>('physician_round');
   const [inlinePriority, setInlinePriority] = useState<'routine' | 'important' | 'stat_urgent'>('routine');
   const [inlineNoteText, setInlineNoteText] = useState('');
+  const [isRxModalOpen, setIsRxModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -816,10 +818,7 @@ export const ClinicalStationView: React.FC<ClinicalStationViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => {
-                  onNavigate('pharmacy');
-                  onTriggerToast('Opening Pharmacy Order Console for Bed M-104...');
-                }}
+                onClick={() => setIsRxModalOpen(true)}
                 className="px-3.5 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold transition-colors flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-[16px]">playlist_add</span>
@@ -1160,6 +1159,13 @@ export const ClinicalStationView: React.FC<ClinicalStationViewProps> = ({
           </div>
         </div>
       </div>
+
+      <NewRxModal 
+        isOpen={isRxModalOpen}
+        onClose={() => setIsRxModalOpen(false)}
+        patient={activePatient}
+        onSuccess={(msg) => onTriggerToast(msg)}
+      />
     </div>
   );
 };

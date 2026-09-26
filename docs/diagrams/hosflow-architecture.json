@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Hosflow Architecture",
+    "output": "hosflow-architecture-rendered.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Users", "sublabel": "Browser / Mobile", "pos": [40, 300], "size": [120, 60] },
+    { "id": "web", "type": "frontend", "label": "React Web App", "sublabel": "Vite + Tailwind", "pos": [250, 300], "size": [130, 60] },
+    { "id": "api", "type": "backend", "label": "API Server", "sublabel": "Express + Node.js", "pos": [500, 300], "size": [130, 60] },
+    { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "Prisma ORM", "pos": [750, 300], "size": [130, 60] },
+    { "id": "gemini", "type": "external", "label": "Gemini API", "sublabel": "AI Generation", "pos": [500, 150], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Hospital Flow System", "wraps": ["web", "api", "db"] }
+  ],
+  "connections": [
+    { "id": "users-to-web", "from": "users", "to": "web", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "web-to-api", "from": "web", "to": "api", "label": "REST API", "labelDy": -24 },
+    { "id": "api-to-db", "from": "api", "to": "db", "label": "Prisma / SQL" },
+    { "id": "api-to-gemini", "from": "api", "to": "gemini", "label": "GenAI SDK", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelDy": -40 }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Application Core", "items": ["React + Tailwind frontend", "Express API backend", "Prisma talking to PostgreSQL"] },
+    { "dot": "cyan", "title": "AI Integration", "items": ["Uses @google/genai for AI features"] }
+  ]
+}
